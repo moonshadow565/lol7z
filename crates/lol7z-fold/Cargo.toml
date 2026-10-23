@@ -1,0 +1,9 @@
+[package]
+name = "lol7z_fold"
+version = "0.1.0"
+description = "Folds over-long file names into a brace-expansion template and back"
+license = "MIT"
+edition.workspace = true
+
+[lints]
+workspace = true

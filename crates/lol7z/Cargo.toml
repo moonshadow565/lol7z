@@ -1,0 +1,17 @@
+[package]
+name = "lol7z"
+version = "0.1.0"
+description = "7-Zip plugin DLL for LeagueToolkit formats: WAD and modpkg"
+license = "MIT"
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+lol7z_api = { path = "../lol7z-api" }
+lol7z_wad = { path = "../lol7z-wad" }
+lol7z_modpkg = { path = "../lol7z-modpkg" }

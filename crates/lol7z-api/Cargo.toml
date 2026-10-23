@@ -1,0 +1,17 @@
+[package]
+name = "lol7z_api"
+description = "Safe API for writing 7-Zip format plugins"
+license = "MIT"
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lol7z_sys = { path = "../lol7z-sys" }
+windows-core.workspace = true
+windows.workspace = true
+
+[[example]]
+name = "toy"
+crate-type = ["cdylib"]

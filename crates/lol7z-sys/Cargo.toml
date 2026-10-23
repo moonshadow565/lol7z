@@ -1,0 +1,20 @@
+[package]
+name = "lol7z_sys"
+description = "7zip COM API"
+license = "MIT"
+edition.workspace = true
+
+[lints.rust]
+nonstandard_style = "allow"
+unsafe_op_in_unsafe_fn = "deny"
+improper_ctypes_definitions = "deny"
+
+[lints.clippy]
+too_many_arguments = "allow"
+upper_case_acronyms = "allow"
+
+[dependencies]
+windows-core.workspace = true
+windows.workspace = true
+bitflags.workspace = true
+open-enum.workspace = true

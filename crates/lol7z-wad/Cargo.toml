@@ -1,0 +1,23 @@
+[package]
+name = "lol7z_wad"
+version = "0.1.0"
+description = "7-Zip plugin for League of Legends WAD archives"
+license = "MIT"
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lol7z_api = { path = "../lol7z-api" }
+lol7z_fold = { path = "../lol7z-fold" }
+flate2.workspace = true
+zstd.workspace = true
+xxhash-rust.workspace = true
+scroll.workspace = true
+open-enum.workspace = true
+ltk_mimir_cache.workspace = true
+ltk_hashdb.workspace = true
+
+[dev-dependencies]
+windows-core.workspace = true
