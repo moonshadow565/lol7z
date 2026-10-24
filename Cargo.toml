@@ -23,10 +23,6 @@ windows = {
 }
 bitflags = "2.5.0"
 open-enum = "0.5.3"  # until `_ = ..` open enums are stable (rust-lang/rust#156628)
-# TODO: comonly used stuff, trim as we go...
-byteorder = "1.5.0"
-thiserror = "1.0.60"
-miette = "7.2.0"
 xxhash-rust = { version = "0.8.15", features = ["xxh64", "xxh3"] }
 flate2 = "1.0.30"
 zstd = { version = "0.13", default-features = false }
