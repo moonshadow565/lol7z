@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace
+      - run: cargo build --release -p lol7z
+      # WiX 7 needs a maintenance-fee EULA accepted; 5 does not.
+      - run: dotnet tool install --global wix --version 5.0.2
+      - name: Installer and zip
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart("v")
+          $name = "lol7z-$tag-x64"
+          wix build -arch x64 -d Version=$version -d Dll=target/release/lol7z.dll -o "$name.msi" wix/lol7z.wxs
+          New-Item -ItemType Directory $name | Out-Null
+          Copy-Item target/release/lol7z.dll, README.md $name
+          Copy-Item docs $name/docs -Recurse
+          Compress-Archive -Path $name -DestinationPath "$name.zip"
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            lol7z-*.msi
+            lol7z-*.zip
+          generate_release_notes: true

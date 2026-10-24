@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The installer: one DLL into 7-Zip's Formats folder, found through the path 7-Zip
+  records in the registry at its own install. Built with WiX 5:
+    wix build -arch x64 -d Version=0.1.0 -d Dll=target/release/lol7z.dll -o lol7z.msi wix/lol7z.wxs
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="lol7z" Manufacturer="lol7z" Version="$(var.Version)" Language="1033"
+           Scope="perMachine" UpgradeCode="7b3c1f2e-5a6d-4e8f-9c0a-1d2e3f4a5b6c">
+    <SummaryInformation Description="7-Zip plugin for League of Legends WAD and modpkg files" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of lol7z is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="SEVENZIPDIR">
+      <RegistrySearch Root="HKLM" Key="Software\7-Zip" Name="Path64" Type="raw" Bitness="always64" />
+    </Property>
+    <Launch Condition="Installed OR SEVENZIPDIR"
+            Message="64-bit 7-Zip was not found. Install it from https://www.7-zip.org/ first." />
+
+    <Directory Id="SEVENZIPDIR" Name="7-Zip">
+      <Directory Id="FormatsDir" Name="Formats" />
+    </Directory>
+
+    <Feature Id="Main">
+      <Component Directory="FormatsDir" Guid="4d1b9c7a-2e3f-4a5b-8c6d-7e8f9a0b1c2d">
+        <File Source="$(var.Dll)" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

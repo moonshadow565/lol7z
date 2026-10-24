@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      # rust-toolchain.toml picks the version; rustup installs it on first use.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo build --workspace
+      - run: cargo test --workspace
+      - run: cargo build --release -p lol7z
+      - run: dotnet tool install --global wix --version 5.0.2
+      - run: wix build -arch x64 -d Version=0.0.0 -d Dll=target/release/lol7z.dll -o lol7z.msi wix/lol7z.wxs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lol7z-x64
+          path: |
+            target/release/lol7z.dll
+            lol7z.msi
