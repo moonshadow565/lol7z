@@ -1,14 +1,20 @@
 //! [`OpenCallback`]: what 7-Zip passes to [`Format::open`](crate::Format::open).
 
-use crate::error::{Result, check, found};
+use crate::error::{Error, Result, check, found, to_hresult};
 use crate::in_stream::InStream;
 use crate::prop::Prop;
 use core::cell::RefCell;
-use lol7z_sys::i_archive::{IArchiveOpenCallback, IArchiveOpenVolumeCallback};
+use core::marker::PhantomData;
+use lol7z_sys::i_archive::{
+    IArchiveOpenCallback, IArchiveOpenCallback_Impl, IArchiveOpenVolumeCallback,
+    IArchiveOpenVolumeCallback_Impl,
+};
 use lol7z_sys::i_password::ICryptoGetTextPassword;
 use lol7z_sys::i_stream::IInStream;
 use lol7z_sys::propid::{ErrorFlags, PropId};
-use windows_core::{BSTR, HSTRING, Interface, PCWSTR};
+use lol7z_sys::propvar::PropVariant;
+use windows::Win32::Foundation::S_FALSE;
+use windows_core::{BSTR, HRESULT, HSTRING, Interface, OutRef, PCWSTR, implement};
 
 pub(crate) fn password(cb: &impl Interface) -> Result<Option<String>> {
     let Ok(p) = cb.cast::<ICryptoGetTextPassword>() else {
@@ -60,15 +66,17 @@ impl OpenReport {
 /// and shows the error. If nothing is usable, return [`Error::Damaged`](crate::Error::Damaged)
 /// instead.
 pub struct OpenCallback<'a> {
-    cb: Option<&'a IArchiveOpenCallback>,
+    cb: Option<IArchiveOpenCallback>,
     report: RefCell<OpenReport>,
+    _borrow: PhantomData<&'a ()>,
 }
 
 impl<'a> OpenCallback<'a> {
     pub(crate) fn new(cb: Option<&'a IArchiveOpenCallback>) -> Self {
         Self {
-            cb,
+            cb: cb.cloned(),
             report: RefCell::default(),
+            _borrow: PhantomData,
         }
     }
 
@@ -77,14 +85,33 @@ impl<'a> OpenCallback<'a> {
         OpenCallback::new(None)
     }
 
+    /// A callback that knows the archive's file name and its sibling files, for calling
+    /// a multi-volume format's `open` outside 7-Zip. `open` gets a sibling's file name
+    /// and returns its stream, or `None` when there is no such file.
+    pub fn with_volumes(
+        name: &str,
+        open: impl Fn(&str) -> Option<InStream> + 'static,
+    ) -> OpenCallback<'static> {
+        let cb: IArchiveOpenCallback = TestVolumes {
+            name: name.to_owned(),
+            open: Box::new(open),
+        }
+        .into();
+        OpenCallback {
+            cb: Some(cb),
+            report: RefCell::default(),
+            _borrow: PhantomData,
+        }
+    }
+
     pub fn set_total(&self, files: Option<u64>, bytes: Option<u64>) -> Result<()> {
-        let Some(cb) = self.cb else { return Ok(()) };
+        let Some(cb) = &self.cb else { return Ok(()) };
         check(unsafe { cb.SetTotal(files.as_ref(), bytes.as_ref()) })
     }
 
     /// Fails with [`Error::ABORT`](crate::Error::ABORT) when the user has cancelled.
     pub fn set_completed(&self, files: Option<u64>, bytes: Option<u64>) -> Result<()> {
-        let Some(cb) = self.cb else { return Ok(()) };
+        let Some(cb) = &self.cb else { return Ok(()) };
         check(unsafe { cb.SetCompleted(files.as_ref(), bytes.as_ref()) })
     }
 
@@ -118,12 +145,14 @@ impl<'a> OpenCallback<'a> {
 
     /// Asks the user for a password. `None` when the host can't ask.
     pub fn password(&self) -> Result<Option<String>> {
-        self.cb.map_or(Ok(None), password)
+        self.cb.as_ref().map_or(Ok(None), password)
     }
 
     /// Access to the archive's file name and sibling files, for multi-volume formats.
+    /// `None` when the host can't give them: the archive isn't a file on disk.
     pub fn volumes(&self) -> Option<Volumes> {
-        self.cb?
+        self.cb
+            .as_ref()?
             .cast::<IArchiveOpenVolumeCallback>()
             .ok()
             .map(Volumes)
@@ -134,7 +163,7 @@ impl<'a> OpenCallback<'a> {
 pub struct Volumes(IArchiveOpenVolumeCallback);
 
 impl Volumes {
-    /// File name of the archive being opened.
+    /// File name of the archive being opened, without its directory.
     pub fn name(&self) -> Result<Option<String>> {
         let name = Prop::read_from(|v| unsafe { self.0.GetProperty(PropId::Name, v) })?;
         Ok(name.and_then(Prop::into_string))
@@ -146,5 +175,46 @@ impl Volumes {
         let mut s: Option<IInStream> = None;
         let hr = unsafe { self.0.GetStream(PCWSTR(name.as_ptr()), &mut s) };
         Ok(found(hr, s)?.map(InStream::from_com))
+    }
+}
+
+type Opener = Box<dyn Fn(&str) -> Option<InStream>>;
+
+/// The host side of [`OpenCallback::with_volumes`].
+#[implement(IArchiveOpenCallback, IArchiveOpenVolumeCallback)]
+struct TestVolumes {
+    name: String,
+    open: Opener,
+}
+
+impl IArchiveOpenCallback_Impl for TestVolumes_Impl {
+    unsafe fn SetTotal(&self, _files: Option<&u64>, _bytes: Option<&u64>) -> HRESULT {
+        HRESULT(0)
+    }
+
+    unsafe fn SetCompleted(&self, _files: Option<&u64>, _bytes: Option<&u64>) -> HRESULT {
+        HRESULT(0)
+    }
+}
+
+impl IArchiveOpenVolumeCallback_Impl for TestVolumes_Impl {
+    unsafe fn GetProperty(&self, prop_id: PropId, value: OutRef<'_, PropVariant>) -> HRESULT {
+        let prop = (prop_id == PropId::Name).then(|| Prop::from(self.name.as_str()));
+        to_hresult(Prop::write_to(value, prop))
+    }
+
+    unsafe fn GetStream(&self, name: PCWSTR, in_stream: OutRef<'_, IInStream>) -> HRESULT {
+        let name = String::from_utf16_lossy(unsafe { name.as_wide() });
+        match (self.open)(&name) {
+            Some(s) => to_hresult(
+                in_stream
+                    .write(Some(s.as_com().clone()))
+                    .map_err(Error::from),
+            ),
+            None => {
+                let _ = in_stream.write(None);
+                S_FALSE
+            }
+        }
     }
 }

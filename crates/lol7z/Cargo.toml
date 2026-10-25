@@ -1,7 +1,7 @@
 [package]
 name = "lol7z"
 version = "0.1.0"
-description = "7-Zip plugin DLL for League of Legends formats: WAD, modpkg and wxy"
+description = "7-Zip plugin DLL for League of Legends formats: WAD, modpkg, wxy and RAF"
 license = "MIT"
 edition.workspace = true
 
@@ -16,3 +16,4 @@ lol7z_api = { path = "../lol7z-api" }
 lol7z_wad = { path = "../lol7z-wad" }
 lol7z_modpkg = { path = "../lol7z-modpkg" }
 lol7z_wxy = { path = "../lol7z-wxy" }
+lol7z_raf = { path = "../lol7z-raf" }

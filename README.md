@@ -1,6 +1,6 @@
 # lol7z
 
-A 7-Zip plugin for League of Legends files. One DLL, `lol7z.dll`, adds three formats to
+A 7-Zip plugin for League of Legends files. One DLL, `lol7z.dll`, adds four formats to
 7-Zip's file manager and command line:
 
 - **WAD** (`*.wad`, `*.wad.client`): the game's archives, read in every version from 1
@@ -10,6 +10,9 @@ A 7-Zip plugin for League of Legends files. One DLL, `lol7z.dll`, adds three for
 - **wxy** (`*.wxy`): the Wooxy skin package from before WADs, read-only. It lists as
   the mod folder cslol-manager imports it to: the game files under `RAW/`, the
   package's name, author and version as `META/info.json`, and its preview images.
+- **RAF** (`*.raf`): the Riot Archive File of the RADS era (`RADS/projects/*/filearchives`),
+  read-only. The `.raf` is the index; its data is in the `.raf.dat` next to it, which
+  7-Zip opens as a second volume. Entries list under their game paths.
 
 ## Why
 
@@ -46,7 +49,7 @@ cargo build --release -p lol7z
 C:\Program Files\7-Zip\Formats\lol7z.dll
 ```
 
-Restart 7-Zip afterwards; `7z i` then lists `WAD`, `modpkg` and `wxy` among the
+Restart 7-Zip afterwards; `7z i` then lists `WAD`, `modpkg`, `wxy` and `raf` among the
 formats.
 
 ## Use
@@ -59,11 +62,12 @@ Anything 7-Zip does with an archive. The switches that matter:
 7z a -tmodpkg my-mod_1.0.0.modpkg ./my-mod/*
 7z a -twad -mx=9 Aatrox.wad.client ./assets/*
 7z x -o "Magic Treeline" "Magic Treeline v2.wxy"
+7z x -o out RADS\projects\lol_game_client\filearchives\0.0.0.25\Archive_1.raf
 ```
 
 `-mx=N` picks the zstd level for WAD and modpkg, 0 stores. Packing a modpkg needs a
 `mod.config.json` in the tree. A wxy only extracts; the folder it gives is one
-cslol-manager imports.
+cslol-manager imports. A RAF only extracts too, and needs its `.raf.dat` beside it.
 
 ## What it looks like
 
@@ -73,6 +77,7 @@ Formats:
  1 C....M.................  WAD      wad client    R W 01  ||  R W 02  ||  R W 03
  1 C......................  modpkg   modpkg        _ m o d p k g _
  1  ......................  wxy      wxy           W X Y S
+ 1  ......................  raf      raf           F0 0E BE 18
 ```
 
 A WAD lists by the paths the game hashed. A name longer than Windows allows is folded
@@ -152,6 +157,7 @@ Comment = Malfurious Bard 7.24 by RaYy; Character Skin/Bard; projects: lol_game_
 | `crates/lol7z-wad` | The WAD format |
 | `crates/lol7z-modpkg` | The modpkg format |
 | `crates/lol7z-wxy` | The wxy format, read-only |
+| `crates/lol7z-raf` | The RAF format, read-only |
 | `crates/lol7z` | The DLL: the formats above, exported |
 
 License: MIT.

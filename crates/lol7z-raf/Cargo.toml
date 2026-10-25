@@ -1,0 +1,16 @@
+[package]
+name = "lol7z_raf"
+version = "0.1.0"
+description = "7-Zip plugin for Riot Archive Files (RAF), read-only"
+license = "MIT"
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lol7z_api = { path = "../lol7z-api" }
+flate2.workspace = true
+
+[dev-dependencies]
+flate2.workspace = true
