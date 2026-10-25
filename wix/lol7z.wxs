@@ -7,7 +7,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="lol7z" Manufacturer="lol7z" Version="$(var.Version)" Language="1033"
            Scope="perMachine" UpgradeCode="7b3c1f2e-5a6d-4e8f-9c0a-1d2e3f4a5b6c">
-    <SummaryInformation Description="7-Zip plugin for League of Legends WAD and modpkg files" />
+    <SummaryInformation Description="7-Zip plugin for League of Legends WAD, modpkg and wxy files" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of lol7z is already installed." />
     <MediaTemplate EmbedCab="yes" />
 

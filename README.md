@@ -1,12 +1,15 @@
 # lol7z
 
-A 7-Zip plugin for League of Legends files. One DLL, `lol7z.dll`, adds two formats to
+A 7-Zip plugin for League of Legends files. One DLL, `lol7z.dll`, adds three formats to
 7-Zip's file manager and command line:
 
 - **WAD** (`*.wad`, `*.wad.client`): the game's archives, read in every version from 1
   to 3.4 and written as 3.4. Entries get their real paths from the Mimir hash tables.
 - **modpkg** (`*.modpkg`): the LeagueToolkit mod package. A package lists as the mod
   project it was packed from, and a mod project packs back into a package.
+- **wxy** (`*.wxy`): the Wooxy skin package from before WADs, read-only. It lists as
+  the mod folder cslol-manager imports it to: the game files under `RAW/`, the
+  package's name, author and version as `META/info.json`, and its preview images.
 
 ## Why
 
@@ -43,7 +46,8 @@ cargo build --release -p lol7z
 C:\Program Files\7-Zip\Formats\lol7z.dll
 ```
 
-Restart 7-Zip afterwards; `7z i` then lists `WAD` and `modpkg` among the formats.
+Restart 7-Zip afterwards; `7z i` then lists `WAD`, `modpkg` and `wxy` among the
+formats.
 
 ## Use
 
@@ -54,10 +58,12 @@ Anything 7-Zip does with an archive. The switches that matter:
 7z x -o out my-mod_1.0.0.modpkg
 7z a -tmodpkg my-mod_1.0.0.modpkg ./my-mod/*
 7z a -twad -mx=9 Aatrox.wad.client ./assets/*
+7z x -o "Magic Treeline" "Magic Treeline v2.wxy"
 ```
 
-`-mx=N` picks the zstd level for both formats, 0 stores. Packing a modpkg needs a
-`mod.config.json` in the tree.
+`-mx=N` picks the zstd level for WAD and modpkg, 0 stores. Packing a modpkg needs a
+`mod.config.json` in the tree. A wxy only extracts; the folder it gives is one
+cslol-manager imports.
 
 ## What it looks like
 
@@ -66,6 +72,7 @@ Anything 7-Zip does with an archive. The switches that matter:
 Formats:
  1 C....M.................  WAD      wad client    R W 01  ||  R W 02  ||  R W 03
  1 C......................  modpkg   modpkg        _ m o d p k g _
+ 1  ......................  wxy      wxy           W X Y S
 ```
 
 A WAD lists by the paths the game hashed. A name longer than Windows allows is folded
@@ -118,6 +125,23 @@ Comment = Evanescia Yone 1.0.0 by s0jaku; layers: base (0), voice (1), hud (2)
 
 ![A modpkg opened in 7-Zip File Manager](docs/demo/modpkg-root.png)
 
+A wxy lists as the folder cslol-manager imports it to. Preview images show no size:
+the package doesn't store one, and inflating them just to list would be waste.
+
+```
+> 7z l "Bard Malfurious.wxy"
+Type = wxy
+Version = 7
+Comment = Malfurious Bard 7.24 by RaYy; Character Skin/Bard; projects: lol_game_client
+
+   Date      Time    Attr         Size   Compressed  Name
+------------------- ----- ------------ ------------  ------------------------
+                    .....        43856         7935  RAW\DATA\Characters\Bard\Skins\Base\Particles\Bard_Base_BA_Flash_tar.dds
+                    .....        32896        11206  RAW\DATA\Characters\Bard\Skins\Base\Particles\Bard_Base_P_Meep_cone_main.dds
+                    .....          112          112  META\info.json
+                    .....                     59920  META\image0.jpg
+```
+
 ## Layout
 
 | Crate | What it is |
@@ -127,6 +151,7 @@ Comment = Evanescia Yone 1.0.0 by s0jaku; layers: base (0), voice (1), hud (2)
 | `crates/lol7z-fold` | The notation that folds an over-long file name and expands it again |
 | `crates/lol7z-wad` | The WAD format |
 | `crates/lol7z-modpkg` | The modpkg format |
+| `crates/lol7z-wxy` | The wxy format, read-only |
 | `crates/lol7z` | The DLL: the formats above, exported |
 
 License: MIT.
