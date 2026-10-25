@@ -1,6 +1,6 @@
 [package]
 name = "lol7z"
-version = "0.1.0"
+version = "0.3.0"
 description = "7-Zip plugin DLL for League of Legends formats: WAD, modpkg, wxy and RAF"
 license = "MIT"
 edition.workspace = true
